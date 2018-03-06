@@ -19,6 +19,7 @@ public:
 
   TcpConnection(boost::asio::io_service& io_service)
     : resolver(io_service), socket(io_service), state(STATE_DISCONNECTED) {}
+  ~TcpConnection();
 
   void connect();
   void disconnect();
@@ -34,14 +35,13 @@ private:
   static constexpr const char* END_MARKER = "\xff\xff\x55\xaa";
   static constexpr const char* START_MARKER = "\xff\xff\xaa\x55";
 
-  State state, previousState;
+  mutable State state, previousState;
   tcp::socket socket;
   tcp::resolver resolver;
-  boost::system::error_code error;
 
   void waitAck();
-  void updateState(State);
-  void revertState();
+  void updateState(State) const;
+  void revertState() const;
 };
 }
 #endif // __CEDES_TCPCONNECTION_H__

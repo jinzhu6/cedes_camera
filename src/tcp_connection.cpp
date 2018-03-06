@@ -7,41 +7,45 @@ using boost::asio::ip::tcp;
 
 namespace Cedes {
 
+TcpConnection::~TcpConnection() {
+  try {
+    this->disconnect();
+  } catch (boost::system::system_error e) {
+    std::cerr << e.what() << std::endl;
+  }
+}
+
 void TcpConnection::connect() {
-  if (isConnected()) return;
+  if (this->isConnected()) return;
 
   updateState(STATE_CONNECTING);
-  try {
-    tcp::resolver::query query(HOST, PORT);
-    tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-    tcp::resolver::iterator end;
+  tcp::resolver::query query(HOST, PORT);
+  tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+  tcp::resolver::iterator end;
 
-    error = boost::asio::error::host_not_found; 
-    while (error && endpoint_iterator != end) {
-      socket.close();
-      socket.connect(*endpoint_iterator++, error);
-    }
-    if (error) {
-      throw::boost::system::system_error(error);
-    }
-    updateState(STATE_CONNECTED);
-  } catch (std::exception& e) {
-    revertState();
-    std::cerr << e.what() << std::endl;
-  }  
+  boost::system::error_code error = boost::asio::error::host_not_found; 
+  while (error && endpoint_iterator != end) {
+    socket.close();
+    socket.connect(*endpoint_iterator++, error);
+  }
+  if (error) {
+    throw::boost::system::system_error(error);
+  }
+  this->updateState(STATE_CONNECTED);
 }
 
 void TcpConnection::disconnect() {
-  if (isDisconnected()) return;
-  State prev_state = state;
-  updateState(STATE_CLOSING);
-  try {
-    socket.close(); 
-    updateState(STATE_DISCONNECTED);
-  } catch (std::exception& e) {
-    std::cerr << e.what() << std::endl;
-    revertState();
+  if (this->isDisconnected()) return;
+
+  this->updateState(STATE_CLOSING);
+
+  boost::system::error_code error;
+  socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, error);  
+  if (error) {
+    this->revertState();
+    throw boost::system::system_error(error);
   }
+  this->updateState(STATE_DISCONNECTED);
 }
 
 bool TcpConnection::isConnected() const {
@@ -54,7 +58,7 @@ bool TcpConnection::isDisconnected() const {
 
 void TcpConnection::sendCommand(const std::vector<uint8_t>& data) {
 
-  if (!isConnected()) return;
+  if (!this->isConnected()) return;
 
   uint32_t data_len = data.size();
   size_t buf_size = MARKER_SIZE + sizeof(data_len) + data_len + MARKER_SIZE;
@@ -77,31 +81,32 @@ void TcpConnection::sendCommand(const std::vector<uint8_t>& data) {
   is >> s;
   buf.consume(buf_size);
 
+  boost::system::error_code error;
   socket.write_some(boost::asio::buffer(s, s.size()), error);
   if (error) {
     throw boost::system::system_error(error);
   }
-  waitAck();
+  this->waitAck();
 }
 
 void TcpConnection::waitAck() {
   std::vector<uint8_t> buf(128);
+  boost::system::error_code error;
 
-  updateState(STATE_WAIT_ACK);
+  this->updateState(STATE_WAIT_ACK);
   size_t len = socket.read_some(boost::asio::buffer(buf), error);
   if (error) {
     throw boost::system::system_error(error);
   }
-  revertState();
+  this->revertState();
 }
 
-void TcpConnection::updateState(State state_) {
+void TcpConnection::updateState(State state_) const {
   previousState = state;
   state = state_;
 }
 
-void TcpConnection::revertState() {
+void TcpConnection::revertState() const {
   state = previousState;
 }
-
 }
