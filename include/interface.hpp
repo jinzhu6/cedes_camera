@@ -9,32 +9,30 @@
 #include "udp_server.hpp"
 
 namespace Cedes {
+struct Frame {
+  uint16_t width;
+  uint16_t height;
+  static const int HEADER_SIZE = 20;
+  std::vector<uint16_t> data;
+  
+  Frame(uint16_t, uint16_t);
+
+  void addDataAtOffset(Packet, uint16_t);
+};
 
 class Interface {
 public:
-  Interface()
-    : tcpConnection(ioService),
-      udpServer(ioService) {
-    tcpConnection.connect();
-    serverThread.reset(new boost::thread(boost::bind(&boost::asio::io_service::run, &ioService)));
-    udpServer.dataReady.connect(helloWorld);
-  }
+  Interface();
   ~Interface();
 
   void getDistance();
 private:
+  Frame* currentFrame;
   boost::asio::io_service ioService;
+  boost::scoped_ptr<boost::thread> serverThread;
   TcpConnection tcpConnection;
   UdpServer udpServer;
-  boost::scoped_ptr<boost::thread> serverThread;
-  
-  struct HelloWorld {
-    void operator()() const {
-      std::cout << "Data ready" << std::endl;
-    }
-  };
-
-  HelloWorld helloWorld;
+  Packet recvBuff;
 };
 }
 #endif

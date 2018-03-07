@@ -7,6 +7,11 @@ using boost::asio::ip::tcp;
 
 namespace Cedes {
 
+typedef std::vector<uint8_t> Packet;
+
+TcpConnection::TcpConnection(boost::asio::io_service& io_service)
+  : resolver(io_service), socket(io_service), state(STATE_DISCONNECTED) {}
+
 TcpConnection::~TcpConnection() {
   try {
     this->disconnect();
@@ -90,7 +95,7 @@ void TcpConnection::sendCommand(const std::vector<uint8_t>& data) {
 }
 
 void TcpConnection::waitAck() {
-  std::vector<uint8_t> buf(128);
+  Packet buf(128);
   boost::system::error_code error;
 
   this->updateState(STATE_WAIT_ACK);

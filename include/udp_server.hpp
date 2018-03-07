@@ -10,27 +10,24 @@ using boost::asio::ip::udp;
 
 namespace Cedes {
 
+//typedef boost::array<uint8_t, 2048> Packet;
+typedef std::vector<uint8_t> Packet;
+
 class UdpServer {
 public:
-  UdpServer(boost::asio::io_service& ios)
-    : socket(ios, udp::endpoint(udp::v4(), PORT)),
-      totalBytes(0) {
-    startReceive();
-  } 
+  UdpServer(boost::asio::io_service &);
   ~UdpServer();
 
-  boost::signals2::signal<void ()> dataReady;
+  boost::signals2::signal<void (Packet, size_t)> dataReady;
 
 private:
   void startReceive();
   void handleReceive(const boost::system::error_code &, std::size_t);
 
-  size_t totalBytes;
-  static const int MAX_BUF_SIZE = 2048;
   static const int PORT = 45454;
   udp::socket socket;
   udp::endpoint remoteEndpoint;
-  boost::array<uint8_t, MAX_BUF_SIZE> recvBuffer;
+  Packet recvBuffer;
 };
 }
 #endif

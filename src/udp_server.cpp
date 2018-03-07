@@ -9,6 +9,12 @@ using boost::asio::ip::udp;
 
 namespace Cedes {
 
+UdpServer::UdpServer(boost::asio::io_service& ios)
+  : socket(ios, udp::endpoint(udp::v4(), PORT)),
+    recvBuffer(Packet(2048)) {
+  startReceive();
+} 
+
 UdpServer::~UdpServer() {
   boost::system::error_code error;
   socket.shutdown(boost::asio::ip::udp::socket::shutdown_both, error);  
@@ -32,9 +38,8 @@ void UdpServer::handleReceive(
   const boost::system::error_code& error,
   std::size_t bytesReceived) {
   if (!error || error == boost::asio::error::message_size) {
-    totalBytes += bytesReceived;
-    dataReady();
+    dataReady(recvBuffer, bytesReceived);
   }
-  startReceive();
+  this->startReceive();
 }
 }

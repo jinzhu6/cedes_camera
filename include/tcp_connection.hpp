@@ -17,8 +17,7 @@ public:
     STATE_WAIT_ACK
   };
 
-  TcpConnection(boost::asio::io_service& io_service)
-    : resolver(io_service), socket(io_service), state(STATE_DISCONNECTED) {}
+  TcpConnection(boost::asio::io_service &);
   ~TcpConnection();
 
   void connect();
