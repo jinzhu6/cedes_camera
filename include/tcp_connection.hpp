@@ -8,6 +8,12 @@ using boost::asio::ip::tcp;
 namespace Cedes {
 
 class TcpConnection {
+  static const int MARKER_SIZE = 4;
+  static constexpr const char* PORT = "50660";
+  static constexpr const char* HOST = "10.10.31.180";
+  static constexpr const char* END_MARKER = "\xff\xff\x55\xaa";
+  static constexpr const char* START_MARKER = "\xff\xff\xaa\x55";
+
 public:
   enum State {
     STATE_CONNECTING,
@@ -28,12 +34,6 @@ public:
   bool isDisconnected() const;
 
 private:
-  static const int MARKER_SIZE = 4;
-  static constexpr const char* PORT = "50660";
-  static constexpr const char* HOST = "10.10.31.180";
-  static constexpr const char* END_MARKER = "\xff\xff\x55\xaa";
-  static constexpr const char* START_MARKER = "\xff\xff\xaa\x55";
-
   mutable State state, previousState;
   tcp::socket socket;
   tcp::resolver resolver;

@@ -23,6 +23,10 @@ UdpServer::~UdpServer() {
   }
 }
 
+void UdpServer::subscribe(std::function<void(Packet, size_t)> onDataReady) {
+  dataReady.connect(onDataReady);
+}
+
 void UdpServer::startReceive() {
   socket.async_receive_from(
     boost::asio::buffer(recvBuffer),

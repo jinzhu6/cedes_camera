@@ -9,10 +9,14 @@
 #include "udp_server.hpp"
 
 namespace Cedes {
+
+typedef std::vector<uint8_t> Packet;
+
 struct Frame {
+  static const int HEADER_SIZE = 20;
+
   uint16_t width;
   uint16_t height;
-  static const int HEADER_SIZE = 20;
   std::vector<uint16_t> data;
   
   Frame(uint16_t, uint16_t);
@@ -25,14 +29,21 @@ public:
   Interface();
   ~Interface();
 
-  void getDistance();
+  void stopStream();
+  void streamDistance();
+  void streamGrayscale();
+  void getDistanceFrame();
+  void getGrayscaleFrame();
+  void subscribe(std::function<void (Frame)>);
+
 private:
+  bool isStreaming;
   Frame* currentFrame;
   boost::asio::io_service ioService;
   boost::scoped_ptr<boost::thread> serverThread;
+  boost::signals2::signal<void (Frame)> frameReady;
   TcpConnection tcpConnection;
   UdpServer udpServer;
-  Packet recvBuff;
 };
 }
 #endif
