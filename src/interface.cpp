@@ -90,16 +90,17 @@ void Interface::setIntegrationTime(uint16_t low, uint16_t mid, uint16_t high, ui
   tcpConnection.sendCommand(payload);
 }
 
-boost::signals2::connection Interface::subscribe(std::function<void (Frame)> onFrameReady) {
+boost::signals2::connection Interface::subscribe(
+  std::function<void (Frame)> onFrameReady) {
   frameReady.connect(onFrameReady);
 }
 
 void Interface::printCameraSettings() {
-  bool settingsCaptured = false;
+  bool hasCapturedSettings = false;
   stopStream();
   boost::signals2::connection c = udpServer.subscribe(
     [&](Packet p, size_t packetSize) -> void {
-      if (!settingsCaptured) {
+      if (!hasCapturedSettings) {
         int i = 20; // payload offset
         std::cout << "Version: "       << +p[i++] << std::endl;
         std::cout << "Datatype: "      << (p[i++] << 8) + p[i++] << std::endl;
@@ -114,11 +115,11 @@ void Interface::printCameraSettings() {
         std::cout << "Int time high: " << (p[i++] << 8) + p[i++] << std::endl;
         std::cout << "MGX: "           << (p[i++] << 8) + p[i++] << std::endl;
         std::cout << "Offset: "        << (p[i++] << 8) + p[i++] << std::endl;
-        settingsCaptured = true;
+        hasCapturedSettings = true;
       }
     });
     getDistanceFrame();
-    while (!settingsCaptured);
+    while (!hasCapturedSettings);
     c.disconnect();
 }
 }
