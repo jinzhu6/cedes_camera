@@ -23,7 +23,6 @@ Interface::Interface()
   : tcpConnection(ioService),
     udpServer(ioService),
     isStreaming(false) {
-  tcpConnection.connect();
   serverThread.reset(new boost::thread(boost::bind(&boost::asio::io_service::run, &ioService)));
   udpServer.subscribe(
     [&](Packet p, size_t packetSize) -> void {

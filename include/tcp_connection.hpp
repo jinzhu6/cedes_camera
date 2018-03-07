@@ -26,21 +26,20 @@ public:
   TcpConnection(boost::asio::io_service &);
   ~TcpConnection();
 
-  void connect();
-  void disconnect();
   void sendCommand(const std::vector<uint8_t> &);
-
-  bool isConnected() const;
-  bool isDisconnected() const;
 
 private:
   mutable State state, previousState;
   tcp::socket socket;
   tcp::resolver resolver;
 
+  void connect();
+  void disconnect();
   void waitAck();
   void updateState(State) const;
   void revertState() const;
+  bool isConnected() const;
+  bool isDisconnected() const;
 };
 }
 #endif // __CEDES_TCPCONNECTION_H__

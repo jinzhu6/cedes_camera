@@ -44,6 +44,6 @@ void UdpServer::handleReceive(
   if (!error || error == boost::asio::error::message_size) {
     dataReady(recvBuffer, bytesReceived);
   }
-  this->startReceive();
+  startReceive();
 }
 }

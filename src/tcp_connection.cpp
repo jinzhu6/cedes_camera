@@ -9,19 +9,21 @@ namespace Cedes {
 
 typedef std::vector<uint8_t> Packet;
 
-TcpConnection::TcpConnection(boost::asio::io_service& io_service)
-  : resolver(io_service), socket(io_service), state(STATE_DISCONNECTED) {}
+TcpConnection::TcpConnection(boost::asio::io_service& ioService)
+  : resolver(ioService), socket(ioService), state(STATE_DISCONNECTED) {
+  connect();
+}
 
 TcpConnection::~TcpConnection() {
   try {
-    this->disconnect();
+    disconnect();
   } catch (boost::system::system_error e) {
     std::cerr << e.what() << std::endl;
   }
 }
 
 void TcpConnection::connect() {
-  if (this->isConnected()) return;
+  if (isConnected()) return;
 
   updateState(STATE_CONNECTING);
   tcp::resolver::query query(HOST, PORT);
@@ -36,21 +38,21 @@ void TcpConnection::connect() {
   if (error) {
     throw::boost::system::system_error(error);
   }
-  this->updateState(STATE_CONNECTED);
+  updateState(STATE_CONNECTED);
 }
 
 void TcpConnection::disconnect() {
-  if (this->isDisconnected()) return;
+  if (isDisconnected()) return;
 
-  this->updateState(STATE_CLOSING);
+  updateState(STATE_CLOSING);
 
   boost::system::error_code error;
   socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, error);  
   if (error) {
-    this->revertState();
+    revertState();
     throw boost::system::system_error(error);
   }
-  this->updateState(STATE_DISCONNECTED);
+  updateState(STATE_DISCONNECTED);
 }
 
 bool TcpConnection::isConnected() const {
@@ -63,7 +65,7 @@ bool TcpConnection::isDisconnected() const {
 
 void TcpConnection::sendCommand(const std::vector<uint8_t>& data) {
 
-  if (!this->isConnected()) return;
+  if (!isConnected()) return;
 
   uint32_t data_len = data.size();
   size_t buf_size = MARKER_SIZE + sizeof(data_len) + data_len + MARKER_SIZE;
@@ -91,7 +93,7 @@ void TcpConnection::sendCommand(const std::vector<uint8_t>& data) {
   if (error) {
     throw boost::system::system_error(error);
   }
-  this->waitAck();
+  waitAck();
 }
 
 void TcpConnection::waitAck() {
