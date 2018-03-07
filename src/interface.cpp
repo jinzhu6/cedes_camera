@@ -80,7 +80,45 @@ void Interface::getGrayscaleFrame() {
   tcpConnection.sendCommand(payload);
 }
 
-void Interface::subscribe(std::function<void (Frame)> onFrameReady) {
+void Interface::setIntegrationTime(uint16_t low, uint16_t mid, uint16_t high, uint16_t gray) {
+  std::vector<uint8_t> payload = {
+    0x00, 0x01,
+    static_cast<uint8_t>(low >> 8), static_cast<uint8_t>(low & 0x00ff),
+    static_cast<uint8_t>(mid >> 8), static_cast<uint8_t>(mid & 0x00ff),
+    static_cast<uint8_t>(high >> 8), static_cast<uint8_t>(high & 0x00ff),
+    static_cast<uint8_t>(gray >> 8), static_cast<uint8_t>(gray & 0x00ff)};
+  tcpConnection.sendCommand(payload);
+}
+
+boost::signals2::connection Interface::subscribe(std::function<void (Frame)> onFrameReady) {
   frameReady.connect(onFrameReady);
+}
+
+void Interface::printCameraSettings() {
+  bool settingsCaptured = false;
+  stopStream();
+  boost::signals2::connection c = udpServer.subscribe(
+    [&](Packet p, size_t packetSize) -> void {
+      if (!settingsCaptured) {
+        int i = 20; // payload offset
+        std::cout << "Version: "       << +p[i++] << std::endl;
+        std::cout << "Datatype: "      << (p[i++] << 8) + p[i++] << std::endl;
+        std::cout << "Width: "         << (p[i++] << 8) + p[i++] << std::endl;
+        std::cout << "Height: "        << (p[i++] << 8) + p[i++] << std::endl;
+        std::cout << "RoiX0: "         << (p[i++] << 8) + p[i++] << std::endl;
+        std::cout << "RoiY0: "         << (p[i++] << 8) + p[i++] << std::endl;
+        std::cout << "RoiX1: "         << (p[i++] << 8) + p[i++] << std::endl;
+        std::cout << "RoiY1: "         << (p[i++] << 8) + p[i++] << std::endl;
+        std::cout << "Int time low: "  << (p[i++] << 8) + p[i++] << std::endl;
+        std::cout << "Int time mid: "  << (p[i++] << 8) + p[i++] << std::endl;
+        std::cout << "Int time high: " << (p[i++] << 8) + p[i++] << std::endl;
+        std::cout << "MGX: "           << (p[i++] << 8) + p[i++] << std::endl;
+        std::cout << "Offset: "        << (p[i++] << 8) + p[i++] << std::endl;
+        settingsCaptured = true;
+      }
+    });
+    getDistanceFrame();
+    while (!settingsCaptured);
+    c.disconnect();
 }
 }

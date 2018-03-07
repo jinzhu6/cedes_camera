@@ -34,7 +34,9 @@ public:
   void streamGrayscale();
   void getDistanceFrame();
   void getGrayscaleFrame();
-  void subscribe(std::function<void (Frame)>);
+  void setIntegrationTime(uint16_t, uint16_t, uint16_t, uint16_t);
+  boost::signals2::connection subscribe(std::function<void (Frame)>);
+  void printCameraSettings();
 
 private:
   bool isStreaming;

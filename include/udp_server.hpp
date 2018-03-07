@@ -19,7 +19,7 @@ public:
   UdpServer(boost::asio::io_service &);
   ~UdpServer();
 
-  void subscribe(std::function<void(Packet, size_t)>);
+  boost::signals2::connection subscribe(std::function<void(Packet, size_t)>);
 
 private:
   udp::socket socket;

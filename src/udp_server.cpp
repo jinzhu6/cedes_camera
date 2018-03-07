@@ -23,8 +23,8 @@ UdpServer::~UdpServer() {
   }
 }
 
-void UdpServer::subscribe(std::function<void(Packet, size_t)> onDataReady) {
-  dataReady.connect(onDataReady);
+boost::signals2::connection UdpServer::subscribe(std::function<void(Packet, size_t)> onDataReady) {
+  return dataReady.connect(onDataReady);
 }
 
 void UdpServer::startReceive() {
