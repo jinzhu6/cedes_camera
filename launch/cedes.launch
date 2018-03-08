@@ -1,0 +1,16 @@
+<!-- Starts up everything needed to run the example listener/talker nodes. -->
+<launch>
+  <node pkg="cedes" type="talker" name="talker">
+    <param name="a" value="1"/>
+    <param name="b" value="2"/>
+    <param name="message" value="Hello from C++"/>
+    <param name="rate" value="1"/>
+    <remap from="example" to="chatter"/>
+  </node>
+
+  <node pkg="cedes" type="listener" name="listener">
+    <remap from="example" to="chatter"/>
+  </node>
+
+  <include file="$(find cedes)/launch/tools.launch"/>
+</launch>

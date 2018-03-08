@@ -1,7 +1,6 @@
 #ifndef __CEDES_INTERFACE_H__
 #define __CEDES_INTERFACE_H__
 
-#include <iostream>
 #include <boost/thread.hpp>
 #include <boost/smart_ptr.hpp>
 

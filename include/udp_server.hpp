@@ -1,7 +1,6 @@
 #ifndef __CEDES_UDPSERVER_H__
 #define __CEDES_UDPSERVER_H__
 
-#include <iostream>
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
 #include <boost/signals2.hpp>
