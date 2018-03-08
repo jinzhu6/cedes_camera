@@ -2,7 +2,6 @@
 #define __CEDES_UDPSERVER_H__
 
 #include <boost/asio.hpp>
-#include <boost/array.hpp>
 #include <boost/signals2.hpp>
 
 using boost::asio::ip::udp;
