@@ -28,22 +28,22 @@ catkin_package(
   CATKIN_DEPENDS dynamic_reconfigure message_runtime roscpp rosgraph_msgs rospy std_msgs
 )
 
-include_directories(${cedes_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS})
+include_directories(${cedes_SOURCE_DIR}/include/${PROJECT_NAME} ${Boost_INCLUDE_DIRS})
 add_library(driver src/tcp_connection.cpp src/udp_server.cpp src/interface.cpp)
 target_link_libraries(driver ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}) 
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_executable(talker src/nodes/talker_node.cpp src/talker.cpp)
-target_link_libraries(talker ${catkin_LIBRARIES})
-add_dependencies(talker cedes_gencfg cedes_generate_messages_cpp)
+add_executable(cedes src/nodes/cedes_node.cpp)
+target_link_libraries(cedes ${catkin_LIBRARIES} driver)
+add_dependencies(cedes cedes_gencfg cedes_generate_messages_cpp)
 
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.h"
 )
 
-install(TARGETS talker
+install(TARGETS cedes
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

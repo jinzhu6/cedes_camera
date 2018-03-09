@@ -6,23 +6,36 @@
 
 namespace Cedes {
 
-Frame::Frame(uint16_t width, uint16_t height)
-  : width(width),
+Frame::Frame(uint64_t frame_id, uint16_t width, uint16_t height)
+  : frame_id(frame_id),
+    width(width),
     height(height),
-    data(std::vector<uint16_t>(width*height)) {}
+    px_size(sizeof(uint16_t)),
+    data(std::vector<uint8_t>(width*height*px_size)),
+    frame_iter(0) {}
 
 void Frame::addDataAtOffset(Packet p, uint16_t offsetInPacket) {
   uint32_t payloadSize   = (p[6] << 8) + p[7];
-  uint32_t offsetInFrame = (p[8] << 24) + (p[9] << 16) + (p[10] << 8) + p[11];
-  for (int i = HEADER_SIZE + offsetInPacket, j = offsetInFrame/2; i < payloadSize; i += 2, ++j) {
-    data[j] = ((p[i] & 0x3F) << 8) + p[i+1];
+  uint32_t dataSize = payloadSize - offsetInPacket;
+  size_t dataStart = HEADER_SIZE + offsetInPacket;
+
+  if (dataStart % 2 == 1) {
+    data[frame_iter++] = p[dataStart++];
+  }
+  for (int i = dataStart; i < dataStart + dataSize - 1; i += 2) {
+    data[frame_iter++] = p[i];
+    data[frame_iter++] = p[i+1];
+  }
+  if (dataSize % 2 == 1) {
+    data[frame_iter++] = p[dataStart + dataSize - 1];
   }
 }
 
 Interface::Interface() 
   : tcpConnection(ioService),
     udpServer(ioService),
-    isStreaming(false) {
+    isStreaming(false),
+    currentFrame_id(0)  {
   serverThread.reset(new boost::thread(boost::bind(&boost::asio::io_service::run, &ioService)));
   udpServer.subscribe(
     [&](Packet p, size_t packetSize) -> void {
@@ -34,7 +47,7 @@ Interface::Interface()
         uint16_t width  = (p[23] << 8) + p[24];
         uint16_t height = (p[25] << 8) + p[26];
         offsetInPacket += (p[43] << 8) + p[44];
-        currentFrame = new Frame(width, height);
+        currentFrame = new Frame(currentFrame_id++, width, height);
       }
       currentFrame->addDataAtOffset(p, offsetInPacket);
       if (packetNum == numPackets - 1) {

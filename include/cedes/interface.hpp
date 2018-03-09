@@ -14,11 +14,16 @@ typedef std::vector<uint8_t> Packet;
 struct Frame {
   static const int HEADER_SIZE = 20;
 
+  uint64_t frame_id;
   uint16_t width;
   uint16_t height;
-  std::vector<uint16_t> data;
+  uint32_t px_size;
+
+  std::vector<uint8_t> data;
+  //std::vector<uint8_t>::iterator frame_iter;
+  size_t frame_iter;
   
-  Frame(uint16_t, uint16_t);
+  Frame(uint64_t, uint16_t, uint16_t);
 
   void addDataAtOffset(Packet, uint16_t);
 };
@@ -39,6 +44,8 @@ public:
 
 private:
   bool isStreaming;
+  uint64_t currentFrame_id;
+
   Frame* currentFrame;
   boost::asio::io_service ioService;
   boost::scoped_ptr<boost::thread> serverThread;

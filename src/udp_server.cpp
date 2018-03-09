@@ -1,6 +1,6 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-
+#include <iostream>
 #include "udp_server.hpp"
 
 using boost::asio::ip::udp;
@@ -23,7 +23,7 @@ UdpServer::~UdpServer() {
 
 boost::signals2::connection UdpServer::subscribe(
   std::function<void(Packet, size_t)> onDataReady) {
-  return dataReady.connect(onDataReady);
+    dataReady.connect(onDataReady);
 }
 
 void UdpServer::startReceive() {
