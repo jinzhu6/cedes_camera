@@ -20,7 +20,7 @@ void Frame::addDataAtOffset(Packet p, uint16_t offsetInPacket) {
   size_t dataStart = HEADER_SIZE + offsetInPacket;
 
   if (dataStart % 2 == 1) {
-    data[frame_iter++] = p[dataStart++];
+    data[frame_iter++] = p[dataStart+1];
   }
   for (int i = dataStart; i < dataStart + dataSize - 1; i += 2) {
     data[frame_iter++] = p[i];
@@ -75,6 +75,12 @@ void Interface::streamDistance() {
   isStreaming = true;
 }
 
+void Interface::streamAmplitude() {
+  std::vector<uint8_t> payload = {0x00, 0x04, 0x01};
+  tcpConnection.sendCommand(payload);
+  isStreaming = true;
+}
+
 void Interface::streamGrayscale() {
   std::vector<uint8_t> payload = {0x00, 0x05, 0x01};
   tcpConnection.sendCommand(payload);
@@ -103,36 +109,44 @@ void Interface::setIntegrationTime(uint16_t low, uint16_t mid, uint16_t high, ui
   tcpConnection.sendCommand(payload);
 }
 
-boost::signals2::connection Interface::subscribe(
+boost::signals2::connection Interface::subscribeCameraInfo(
+  std::function<void (CameraInfo)> onCameraInfoReady) {
+  cameraInfoReady.connect(onCameraInfoReady);
+}
+
+boost::signals2::connection Interface::subscribeFrame(
   std::function<void (Frame)> onFrameReady) {
   frameReady.connect(onFrameReady);
 }
 
-void Interface::printCameraSettings() {
-  bool hasCapturedSettings = false;
+CameraInfo Interface::getCameraInfo() {
+  bool hasCapturedInfo = false;
   stopStream();
-  boost::signals2::connection c = udpServer.subscribe(
+  CameraInfo camInfo;
+
+  boost::signals2::connection c;
+  c = udpServer.subscribe(
     [&](Packet p, size_t packetSize) -> void {
-      if (!hasCapturedSettings) {
-        int i = 20; // payload offset
-        std::cout << "Version: "       << +p[i++] << std::endl;
-        std::cout << "Datatype: "      << (p[i++] << 8) + p[i++] << std::endl;
-        std::cout << "Width: "         << (p[i++] << 8) + p[i++] << std::endl;
-        std::cout << "Height: "        << (p[i++] << 8) + p[i++] << std::endl;
-        std::cout << "RoiX0: "         << (p[i++] << 8) + p[i++] << std::endl;
-        std::cout << "RoiY0: "         << (p[i++] << 8) + p[i++] << std::endl;
-        std::cout << "RoiX1: "         << (p[i++] << 8) + p[i++] << std::endl;
-        std::cout << "RoiY1: "         << (p[i++] << 8) + p[i++] << std::endl;
-        std::cout << "Int time low: "  << (p[i++] << 8) + p[i++] << std::endl;
-        std::cout << "Int time mid: "  << (p[i++] << 8) + p[i++] << std::endl;
-        std::cout << "Int time high: " << (p[i++] << 8) + p[i++] << std::endl;
-        std::cout << "MGX: "           << (p[i++] << 8) + p[i++] << std::endl;
-        std::cout << "Offset: "        << (p[i++] << 8) + p[i++] << std::endl;
-        hasCapturedSettings = true;
+      if (!hasCapturedInfo) {
+        int offset = 20; // payload offset
+      /*camInfo.version =*/ p[offset++];
+      /*camInfo.dataType =*/(p[offset++] << 8) + p[offset++];
+        camInfo.width   = (p[offset++] << 8) + p[offset++];
+        camInfo.height  = (p[offset++] << 8) + p[offset++];
+        camInfo.roiX0   = (p[offset++] << 8) + p[offset++];
+        camInfo.roiY0   = (p[offset++] << 8) + p[offset++];
+        camInfo.roiX1   = (p[offset++] << 8) + p[offset++];
+        camInfo.roiY1   = (p[offset++] << 8) + p[offset++];
+        // camInfo.int_time_low = (p[offset++] << 8) + p[offset++] << std::endl;
+        // camInfo.int_time_mid = (p[offset++] << 8) + p[offset++] << std::endl;
+        // camInfo.int_time_high = (p[offset++] << 8) + p[offset++] << std::endl;
+        // camInfo.mgx = (p[offset++] << 8) + p[offset++] << std::endl;
+        // camInfo.offset = (p[offset++] << 8) + p[offset++] << std::endl;
+        hasCapturedInfo = true;
+        c.disconnect();
+        cameraInfoReady(camInfo);
       }
     });
     getDistanceFrame();
-    while (!hasCapturedSettings);
-    c.disconnect();
 }
 }

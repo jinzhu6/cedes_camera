@@ -11,6 +11,15 @@ namespace Cedes {
 
 typedef std::vector<uint8_t> Packet;
 
+struct CameraInfo {
+  uint16_t width;
+  uint16_t height;
+  uint16_t roiX0;
+  uint16_t roiY0;
+  uint16_t roiX1;
+  uint16_t roiY1;
+};
+
 struct Frame {
   static const int HEADER_SIZE = 20;
 
@@ -35,12 +44,14 @@ public:
 
   void stopStream();
   void streamDistance();
+  void streamAmplitude();
   void streamGrayscale();
   void getDistanceFrame();
   void getGrayscaleFrame();
   void setIntegrationTime(uint16_t, uint16_t, uint16_t, uint16_t);
-  boost::signals2::connection subscribe(std::function<void (Frame)>);
-  void printCameraSettings();
+  boost::signals2::connection subscribeFrame(std::function<void (Frame)>);
+  boost::signals2::connection subscribeCameraInfo(std::function<void (CameraInfo)>);
+  CameraInfo getCameraInfo();
 
 private:
   bool isStreaming;
@@ -50,6 +61,7 @@ private:
   boost::asio::io_service ioService;
   boost::scoped_ptr<boost::thread> serverThread;
   boost::signals2::signal<void (Frame)> frameReady;
+  boost::signals2::signal<void (CameraInfo)> cameraInfoReady;
   TcpConnection tcpConnection;
   UdpServer udpServer;
 };

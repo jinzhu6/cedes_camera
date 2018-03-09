@@ -11,15 +11,21 @@ public:
 
   enum Command {
     STREAM_DISTANCE,
-    STREAM_GRAYSCALE
+    STREAM_GRAYSCALE,
+    STREAM_AMPLITUDE,
+    CAMERA_INFO
   };
 
   CedesNode(ros::NodeHandle* nh)
     : seq(0),
       nh(nh) {
     publisher = nh->advertise<sensor_msgs::Image>("cedes", 1000);
-    ROS_INFO("[+] Cedes camera node started");
-    conn = iface.subscribe(
+    connectionCameraInfo = iface.subscribeCameraInfo(
+      [&](CameraInfo camInfo) -> void {
+        std::cout << "I got camera info!" << std::endl;
+      }
+    );
+    connectionFrames = iface.subscribeFrame(
       [&](Cedes::Frame f) {
         sensor_msgs::Image img;
         img.header.seq = seq++;
@@ -31,22 +37,23 @@ public:
         img.step = img.width * f.px_size;
         img.is_bigendian = 1;
         img.data = f.data;
-         if (seq == 10) {
-         for (int i = 0; i < f.height; ++i) {
-         for (int j = 0; j < f.width*2; j += 2) {
-           std::cout << (f.data[i*f.width*2 + j] << 8) + f.data[i*f.width*2 + j + 1] << " ";
-         } std::cout << std::endl;
-         }
-         }
+//         if (seq == 10) {
+//         for (int i = 0; i < f.height; ++i) {
+//         for (int j = 0; j < f.width*2; j += 2) {
+//           std::cout << (f.data[i*f.width*2 + j] << 8) + f.data[i*f.width*2 + j + 1] << " ";
+//         } std::cout << std::endl;
+//         }
+//         }
 
         publisher.publish(img);
       });
-
+    ROS_INFO("[+] Cedes camera node started");
   }
 
   ~CedesNode() {
     publisher.shutdown();
-    conn.disconnect();
+    connectionFrames.disconnect();
+    connectionCameraInfo.disconnect();
   }
 
   void sendCommand(Command c) {
@@ -56,6 +63,12 @@ public:
         break;
       case STREAM_GRAYSCALE:
         iface.streamGrayscale();
+        break;
+      case STREAM_AMPLITUDE:
+        iface.streamAmplitude();
+        break;
+      case CAMERA_INFO:
+        iface.getCameraInfo();
         break;
       default:
         break;
@@ -67,7 +80,9 @@ private:
   Cedes::Interface iface;
   ros::NodeHandle* nh;
   ros::Publisher publisher;
-  boost::signals2::connection conn;
+  ros::ServiceServer service;
+  boost::signals2::connection connectionFrames;
+  boost::signals2::connection connectionCameraInfo;
 };
 }
 
@@ -78,7 +93,7 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
 
   Cedes::CedesNode node(&nh);
-  node.sendCommand(node.STREAM_DISTANCE);
+  node.sendCommand(node.STREAM_GRAYSCALE);
 
   // Let ROS handle all callbacks.
   ros::spin();
