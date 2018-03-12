@@ -2,34 +2,10 @@
 #include <boost/thread.hpp>
 #include <boost/smart_ptr.hpp>
 
+#include "frame.hpp"
 #include "interface.hpp"
 
 namespace Cedes {
-
-Frame::Frame(uint64_t frame_id, uint16_t width, uint16_t height)
-  : frame_id(frame_id),
-    width(width),
-    height(height),
-    px_size(sizeof(uint16_t)),
-    data(std::vector<uint8_t>(width*height*px_size)),
-    frame_iter(0) {}
-
-void Frame::addDataAtOffset(Packet p, uint16_t offsetInPacket) {
-  uint32_t payloadSize   = (p[6] << 8) + p[7];
-  uint32_t dataSize = payloadSize - offsetInPacket;
-  size_t dataStart = HEADER_SIZE + offsetInPacket;
-
-  if (dataStart % 2 == 1) {
-    data[frame_iter++] = p[dataStart+1];
-  }
-  for (int i = dataStart; i < dataStart + dataSize - 1; i += 2) {
-    data[frame_iter++] = p[i];
-    data[frame_iter++] = p[i+1];
-  }
-  if (dataSize % 2 == 1) {
-    data[frame_iter++] = p[dataStart + dataSize - 1];
-  }
-}
 
 Interface::Interface() 
   : tcpConnection(ioService),
@@ -38,20 +14,21 @@ Interface::Interface()
     currentFrame_id(0)  {
   serverThread.reset(new boost::thread(boost::bind(&boost::asio::io_service::run, &ioService)));
   udpServer.subscribe(
-    [&](Packet p, size_t packetSize) -> void {
-      uint32_t numPackets = (p[12] << 24) + (p[13] << 16) + (p[14] << 8) + p[15];
+    [&](const Packet& p) -> void {
       uint32_t packetNum  = (p[16] << 24) + (p[17] << 16) + (p[18] << 8) + p[19];
 
-      uint16_t offsetInPacket = 0;
-      if (packetNum == 0) {
+      int i = 0;
+      if (packetNum == 0) { // new frame
         uint16_t width  = (p[23] << 8) + p[24];
         uint16_t height = (p[25] << 8) + p[26];
-        offsetInPacket += (p[43] << 8) + p[44];
-        currentFrame = new Frame(currentFrame_id++, width, height);
-      }
-      currentFrame->addDataAtOffset(p, offsetInPacket);
-      if (packetNum == numPackets - 1) {
-        frameReady(*currentFrame);
+        currentFrame = std::shared_ptr<Frame>(new Frame(1, currentFrame_id++, width, height));
+        currentFrame->addDataAtStart(p);
+      } else {
+        uint32_t numPackets = (p[12] << 24) + (p[13] << 16) + (p[14] << 8) + p[15];
+        currentFrame->addDataAtOffset(p);
+        if (packetNum == numPackets - 1) {
+          frameReady(currentFrame);
+        }  
       }
     });
 }
@@ -69,21 +46,20 @@ void Interface::stopStream() {
   isStreaming = false;
 }
 
-void Interface::streamDistance() {
-  std::vector<uint8_t> payload = {0x00, 0x03, 0x01};
-  tcpConnection.sendCommand(payload);
-  isStreaming = true;
+void Interface::streamAmplitude() {
+  streamMeasurement(0x02);
 }
 
-void Interface::streamAmplitude() {
-  std::vector<uint8_t> payload = {0x00, 0x04, 0x01};
-  tcpConnection.sendCommand(payload);
-  isStreaming = true;
+void Interface::streamDistance() {
+  streamMeasurement(0x03);
 }
 
 void Interface::streamGrayscale() {
-  std::vector<uint8_t> payload = {0x00, 0x05, 0x01};
-  tcpConnection.sendCommand(payload);
+  streamMeasurement(0x05);
+}
+
+void Interface::streamMeasurement(uint8_t cmd) {
+  tcpConnection.sendCommand(std::vector<uint8_t>({0x00, cmd, 0x01}));
   isStreaming = true;
 }
 
@@ -115,7 +91,7 @@ boost::signals2::connection Interface::subscribeCameraInfo(
 }
 
 boost::signals2::connection Interface::subscribeFrame(
-  std::function<void (Frame)> onFrameReady) {
+  std::function<void (std::shared_ptr<Frame>)> onFrameReady) {
   frameReady.connect(onFrameReady);
 }
 
@@ -126,22 +102,16 @@ CameraInfo Interface::getCameraInfo() {
 
   boost::signals2::connection c;
   c = udpServer.subscribe(
-    [&](Packet p, size_t packetSize) -> void {
+    [&](const Packet& p) -> void {
       if (!hasCapturedInfo) {
-        int offset = 20; // payload offset
-      /*camInfo.version =*/ p[offset++];
-      /*camInfo.dataType =*/(p[offset++] << 8) + p[offset++];
-        camInfo.width   = (p[offset++] << 8) + p[offset++];
-        camInfo.height  = (p[offset++] << 8) + p[offset++];
-        camInfo.roiX0   = (p[offset++] << 8) + p[offset++];
-        camInfo.roiY0   = (p[offset++] << 8) + p[offset++];
-        camInfo.roiX1   = (p[offset++] << 8) + p[offset++];
-        camInfo.roiY1   = (p[offset++] << 8) + p[offset++];
-        // camInfo.int_time_low = (p[offset++] << 8) + p[offset++] << std::endl;
-        // camInfo.int_time_mid = (p[offset++] << 8) + p[offset++] << std::endl;
-        // camInfo.int_time_high = (p[offset++] << 8) + p[offset++] << std::endl;
-        // camInfo.mgx = (p[offset++] << 8) + p[offset++] << std::endl;
-        // camInfo.offset = (p[offset++] << 8) + p[offset++] << std::endl;
+        int offset = 23;
+        camInfo.width  = (p[offset++] << 8) + p[offset++];
+        camInfo.height = (p[offset++] << 8) + p[offset++];
+        camInfo.roiX0  = (p[offset++] << 8) + p[offset++];
+        camInfo.roiY0  = (p[offset++] << 8) + p[offset++];
+        camInfo.roiX1  = (p[offset++] << 8) + p[offset++];
+        camInfo.roiY1  = (p[offset++] << 8) + p[offset++];
+
         hasCapturedInfo = true;
         c.disconnect();
         cameraInfoReady(camInfo);

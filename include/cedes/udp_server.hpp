@@ -17,14 +17,14 @@ public:
   UdpServer(boost::asio::io_service &);
   ~UdpServer();
 
-  boost::signals2::connection subscribe(std::function<void(Packet, size_t)>);
+  boost::signals2::connection subscribe(std::function<void(Packet &)>);
 
 private:
   udp::socket socket;
   udp::endpoint remoteEndpoint;
   Packet recvBuffer;
 
-  boost::signals2::signal<void (Packet, size_t)> dataReady;
+  boost::signals2::signal<void (Packet &)> dataReady;
 
   void startReceive();
   void handleReceive(const boost::system::error_code &, std::size_t);

@@ -22,7 +22,7 @@ UdpServer::~UdpServer() {
 }
 
 boost::signals2::connection UdpServer::subscribe(
-  std::function<void(Packet, size_t)> onDataReady) {
+  std::function<void(Packet &)> onDataReady) {
     dataReady.connect(onDataReady);
 }
 
@@ -41,7 +41,7 @@ void UdpServer::handleReceive(
   const boost::system::error_code& error,
   std::size_t bytesReceived) {
   if (!error || error == boost::asio::error::message_size) {
-    dataReady(recvBuffer, bytesReceived);
+    dataReady(recvBuffer);
   }
   startReceive();
 }

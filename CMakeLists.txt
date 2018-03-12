@@ -29,7 +29,7 @@ catkin_package(
 )
 
 include_directories(${cedes_SOURCE_DIR}/include/${PROJECT_NAME} ${Boost_INCLUDE_DIRS})
-add_library(driver src/tcp_connection.cpp src/udp_server.cpp src/interface.cpp)
+add_library(driver src/tcp_connection.cpp src/udp_server.cpp src/interface.cpp src/frame.cpp)
 target_link_libraries(driver ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}) 
 
 include_directories(include ${catkin_INCLUDE_DIRS})
