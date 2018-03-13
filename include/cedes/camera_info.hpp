@@ -6,6 +6,7 @@
 namespace Cedes {
 
 struct CameraInfo {
+  uint16_t frame_id;
   uint16_t width;
   uint16_t height;
   uint16_t roiX0;

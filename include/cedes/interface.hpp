@@ -26,22 +26,24 @@ public:
   void getGrayscaleFrame();
   void setIntegrationTime(uint16_t, uint16_t, uint16_t, uint16_t);
   boost::signals2::connection subscribeFrame(std::function<void (std::shared_ptr<Frame>)>);
-  boost::signals2::connection subscribeCameraInfo(std::function<void (CameraInfo)>);
-  CameraInfo getCameraInfo();
+  boost::signals2::connection subscribeCameraInfo(std::function<void (std::shared_ptr<CameraInfo>)>);
+  std::shared_ptr<CameraInfo> getCameraInfo(const Packet &);
 
 private:
   bool isStreaming;
+  uint8_t dataType;
   uint64_t currentFrame_id;
 
   std::shared_ptr<Frame> currentFrame;
   boost::asio::io_service ioService;
   boost::scoped_ptr<boost::thread> serverThread;
   boost::signals2::signal<void (std::shared_ptr<Frame>)> frameReady;
-  boost::signals2::signal<void (CameraInfo)> cameraInfoReady;
+  boost::signals2::signal<void (std::shared_ptr<CameraInfo>)> cameraInfoReady;
   TcpConnection tcpConnection;
   UdpServer udpServer;
 
   void streamMeasurement(uint8_t);
+  void setDataType(uint8_t);
 };
 }
 #endif

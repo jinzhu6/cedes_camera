@@ -34,16 +34,16 @@ target_link_libraries(driver ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_executable(cedes src/nodes/cedes_node.cpp)
-target_link_libraries(cedes ${catkin_LIBRARIES} driver)
-add_dependencies(cedes cedes_gencfg cedes_generate_messages_cpp)
+add_executable(cedes_node src/nodes/cedes_node.cpp)
+target_link_libraries(cedes_node ${catkin_LIBRARIES} driver)
+add_dependencies(cedes_node cedes_gencfg cedes_generate_messages_cpp)
 
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.h"
 )
 
-install(TARGETS cedes
+install(TARGETS cedes_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

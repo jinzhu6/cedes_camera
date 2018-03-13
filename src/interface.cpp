@@ -11,18 +11,20 @@ Interface::Interface()
   : tcpConnection(ioService),
     udpServer(ioService),
     isStreaming(false),
+    dataType(0),
     currentFrame_id(0)  {
   serverThread.reset(new boost::thread(boost::bind(&boost::asio::io_service::run, &ioService)));
   udpServer.subscribe(
     [&](const Packet& p) -> void {
       uint32_t packetNum  = (p[16] << 24) + (p[17] << 16) + (p[18] << 8) + p[19];
 
-      int i = 0;
       if (packetNum == 0) { // new frame
         uint16_t width  = (p[23] << 8) + p[24];
         uint16_t height = (p[25] << 8) + p[26];
-        currentFrame = std::shared_ptr<Frame>(new Frame(1, currentFrame_id++, width, height));
+        currentFrame = std::shared_ptr<Frame>(new Frame(dataType, currentFrame_id++, width, height));
         currentFrame->addDataAtStart(p);
+
+        cameraInfoReady(getCameraInfo(p));
       } else {
         uint32_t numPackets = (p[12] << 24) + (p[13] << 16) + (p[14] << 8) + p[15];
         currentFrame->addDataAtOffset(p);
@@ -47,14 +49,17 @@ void Interface::stopStream() {
 }
 
 void Interface::streamAmplitude() {
+  setDataType(0);
   streamMeasurement(0x02);
 }
 
 void Interface::streamDistance() {
+  setDataType(1);
   streamMeasurement(0x03);
 }
 
 void Interface::streamGrayscale() {
+  setDataType(1);
   streamMeasurement(0x05);
 }
 
@@ -86,7 +91,7 @@ void Interface::setIntegrationTime(uint16_t low, uint16_t mid, uint16_t high, ui
 }
 
 boost::signals2::connection Interface::subscribeCameraInfo(
-  std::function<void (CameraInfo)> onCameraInfoReady) {
+  std::function<void (std::shared_ptr<CameraInfo>)> onCameraInfoReady) {
   cameraInfoReady.connect(onCameraInfoReady);
 }
 
@@ -95,28 +100,21 @@ boost::signals2::connection Interface::subscribeFrame(
   frameReady.connect(onFrameReady);
 }
 
-CameraInfo Interface::getCameraInfo() {
-  bool hasCapturedInfo = false;
-  stopStream();
-  CameraInfo camInfo;
+void Interface::setDataType(uint8_t d) {
+  dataType = d;
+}
 
-  boost::signals2::connection c;
-  c = udpServer.subscribe(
-    [&](const Packet& p) -> void {
-      if (!hasCapturedInfo) {
-        int offset = 23;
-        camInfo.width  = (p[offset++] << 8) + p[offset++];
-        camInfo.height = (p[offset++] << 8) + p[offset++];
-        camInfo.roiX0  = (p[offset++] << 8) + p[offset++];
-        camInfo.roiY0  = (p[offset++] << 8) + p[offset++];
-        camInfo.roiX1  = (p[offset++] << 8) + p[offset++];
-        camInfo.roiY1  = (p[offset++] << 8) + p[offset++];
+std::shared_ptr<CameraInfo> Interface::getCameraInfo(const Packet& p) {
+  std::shared_ptr<CameraInfo> camInfo(new CameraInfo);
 
-        hasCapturedInfo = true;
-        c.disconnect();
-        cameraInfoReady(camInfo);
-      }
-    });
-    getDistanceFrame();
+  int offset = 23;
+  camInfo->width  = (p[offset++] << 8) + p[offset++];
+  camInfo->height = (p[offset++] << 8) + p[offset++];
+  camInfo->roiX0  = (p[offset++] << 8) + p[offset++];
+  camInfo->roiY0  = (p[offset++] << 8) + p[offset++];
+  camInfo->roiX1  = (p[offset++] << 8) + p[offset++];
+  camInfo->roiY1  = (p[offset++] << 8) + p[offset++];
+
+  return camInfo;
 }
 }

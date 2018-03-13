@@ -1,35 +1,48 @@
+#include <map>
 #include <iostream>
 #include <ros/ros.h>
 #include <cedes/interface.hpp>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/CameraInfo.h>
+#include <sensor_msgs/SetCameraInfo.h>
 
 namespace Cedes {
 
 class CedesNode {
 public:
 
-  enum Command {
-    CAPTURE_DISTANCE,
-    STREAM_DISTANCE,
-    STREAM_GRAYSCALE,
-    STREAM_AMPLITUDE,
-    CAMERA_INFO
-  };
+  CedesNode()
+    : frameSeq(0),
+      cameraSeq(0),
+      nh("~") {
 
-  CedesNode(ros::NodeHandle* nh)
-    : seq(0),
-      nh(nh) {
-    publisher = nh->advertise<sensor_msgs::Image>("cedes", 1000);
+    nh.getParam("measurement", streamType);
+    nh.getParam("int_time_low", int_time_low);
+    nh.getParam("int_time_mid", int_time_mid);
+    nh.getParam("int_time_high", int_time_high);
+    nh.getParam("int_time_gray", int_time_gray);
+
+    imagePublisher = nh.advertise<sensor_msgs::Image>("image_raw", 1000);
     connectionCameraInfo = iface.subscribeCameraInfo(
-      [&](CameraInfo camInfo) -> void {
-        std::cout << "I got camera info!" << std::endl;
+      [&](std::shared_ptr<CameraInfo> ci) -> void {
+        cameraInfo.width = ci->width;
+        cameraInfo.height = ci->height;
+        cameraInfo.roi.x_offset = ci->roiX0;
+        cameraInfo.roi.y_offset = ci->roiY0;
+        cameraInfo.roi.width = ci->roiX1 - ci->roiX0;
+        cameraInfo.roi.height = ci->roiY1 - ci->roiY0;
       }
     );
+    cameraInfoPublisher = nh.advertise<sensor_msgs::CameraInfo>("camera_info", 1000);
+
+    cameraInfoService = nh.advertiseService("set_camera_info",
+      &Cedes::CedesNode::setCameraInfo, this);
+
     connectionFrames = iface.subscribeFrame(
-      [&](std::shared_ptr<Frame> f) {
+      [&](std::shared_ptr<Frame> f) -> void {
         sensor_msgs::Image img;
-        img.header.seq = seq++;
+        img.header.seq = frameSeq++;
         img.header.stamp = ros::Time::now();
         img.header.frame_id = std::to_string(f->frame_id);
         img.height = static_cast<uint32_t>(f->height);
@@ -38,33 +51,59 @@ public:
         img.step = img.width * f->px_size;
         img.is_bigendian = 0;
         img.data = f->data;
-//        if (seq == 1) {
-//          for (int i = 0; i < f.height; ++i) {
-//            for (int j = 0; j < f.width*2; j += 2) {
-//              std::cout << (f.data[i*f.width*2 + j + 1] << 8) + f.data[i*f.width*2 + j] << " ";
-//            } std::cout << std::endl;
-//          }
-//        }
-
-        publisher.publish(img);
+        imagePublisher.publish(img);
       });
-    ROS_INFO("[+] Cedes camera node started");
+    ROS_INFO("[i] Cedes camera node started");
+  }
+
+  void run() {
+    setIntegrationTimes();
+    sendCommand();
+    ROS_INFO("[i] Streaming %s", streamType.c_str());  
   }
 
   ~CedesNode() {
-    publisher.shutdown();
+    imagePublisher.shutdown();
+    cameraInfoPublisher.shutdown();
     connectionFrames.disconnect();
     connectionCameraInfo.disconnect();
   }
 
-  void setIntegrationTime(uint16_t low, uint16_t mid, uint16_t high, uint16_t gray) {
-    iface.setIntegrationTime(low, mid, high, gray);
+private:
+  enum Command {
+    STREAM_DISTANCE,
+    STREAM_GRAYSCALE,
+    STREAM_AMPLITUDE,
+  };
+
+  int int_time_low, int_time_mid, int_time_high, int_time_gray;
+  uint32_t frameSeq, cameraSeq;
+  std::string streamType;
+  std::map<std::string, Command> commandMap =
+    {{"amplitude", STREAM_AMPLITUDE},
+     {"distance", STREAM_DISTANCE}, 
+     {"grayscale", STREAM_GRAYSCALE}}; 
+
+  ros::NodeHandle nh;
+  ros::Publisher imagePublisher;
+  ros::Publisher cameraInfoPublisher;
+  ros::ServiceServer cameraInfoService;
+
+  sensor_msgs::CameraInfo cameraInfo;
+
+  Cedes::Interface iface;
+
+  boost::signals2::connection connectionFrames;
+  boost::signals2::connection connectionCameraInfo;
+
+  void setIntegrationTimes() {
+    iface.setIntegrationTime(int_time_low, int_time_mid, int_time_high, int_time_gray);
   }
 
-  void sendCommand(Command c) {
-    switch(c) {
-      case CAPTURE_DISTANCE:
-        iface.getDistanceFrame();
+  void sendCommand() {
+    switch(commandMap[streamType]) {
+      case STREAM_AMPLITUDE:
+        iface.streamAmplitude();
         break;
       case STREAM_DISTANCE:
         iface.streamDistance();
@@ -72,38 +111,35 @@ public:
       case STREAM_GRAYSCALE:
         iface.streamGrayscale();
         break;
-      case STREAM_AMPLITUDE:
-        iface.streamAmplitude();
-        break;
-      case CAMERA_INFO:
-        iface.getCameraInfo();
-        break;
       default:
         break;
     }
   }
 
-private:
-  uint32_t seq;
-  Cedes::Interface iface;
-  ros::NodeHandle* nh;
-  ros::Publisher publisher;
-  ros::ServiceServer service;
-  boost::signals2::connection connectionFrames;
-  boost::signals2::connection connectionCameraInfo;
+  bool setCameraInfo(
+    sensor_msgs::SetCameraInfo::Request& req,
+    sensor_msgs::SetCameraInfo::Response& res) {
+    req.camera_info.width = cameraInfo.width;
+    req.camera_info.height = cameraInfo.height;
+    req.camera_info.roi = cameraInfo.roi;
+
+    cameraInfoPublisher.publish(req.camera_info);
+
+    res.success = true;
+    res.status_message = "";
+    
+    return true;
+  }
 };
 }
 
 int main(int argc, char **argv)
 {
-  // Set up ROS.
   ros::init(argc, argv, "cedes");
-  ros::NodeHandle nh;
 
-  Cedes::CedesNode node(&nh);
-  node.sendCommand(node.STREAM_DISTANCE);
+  Cedes::CedesNode node;
+  node.run();
 
-  // Let ROS handle all callbacks.
   ros::spin();
 
   return 0;

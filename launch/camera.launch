@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+
+<launch>
+  <arg name="ns" default="cedes"/>
+  <arg name="nn" default="camera"/>
+  <arg name="respawn" default="false"/>
+  <arg name="measurement" default="distance"/>
+  <arg name="int_time_low" default="1000"/>
+  <arg name="int_time_mid" default="1000"/>
+  <arg name="int_time_high" default="1000"/>
+  <arg name="int_time_gray" default="1000"/>
+
+<!--  <group ns="$(arg ns)"> -->
+    <node pkg="cedes" 
+          type="cedes_node"
+          name="$(arg nn)"
+          output="screen"
+          respawn="$(arg respawn)">
+
+      <param name="measurement" value="$(arg measurement)"/>
+      <param name="int_time_low" value="$(arg int_time_low)"/>
+      <param name="int_time_mid" value="$(arg int_time_mid)"/>
+      <param name="int_time_high" value="$(arg int_time_high)"/>
+      <param name="int_time_gray" value="$(arg int_time_gray)"/>
+
+      <remap from="image_raw" to="$(arg nn)/image_raw"/> 
+      <remap from="camera_info" to="$(arg nn)/camera_info"/> 
+      <remap from="set_camera_info" to="$(arg nn)/set_camera_info"/> 
+    </node>
+<!--  </group> -->
+</launch>

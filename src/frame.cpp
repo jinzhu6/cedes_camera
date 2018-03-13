@@ -33,11 +33,11 @@ void Frame::addDataAtStart(const Packet& p) {
   const uint32_t frameDataEnd = frameDataStart + payloadSize - payloadHeaderOffset;
 
   int i, j;
-  for (i = payloadDataStart, j = frameDataStart; i + 1 < payloadDataEnd; i += 2, j += 2) {
+  for (i = payloadDataStart, j = 2*frameDataStart/stride; i + 1 < payloadDataEnd; i += stride, j += 2) {
     data[j] = p[i];
-    data[j+1] = p[i+1] & 0x3f;
+    data[j+1] = p[i+1] & px_mask;
   }
-  for (; j < frameDataEnd; ++i, ++j) {
+  for (; j < 2*frameDataEnd/stride; ++i, ++j) {
     data[j] = p[i];
   }
 }
@@ -53,12 +53,12 @@ void Frame::addDataAtOffset(const Packet& p) {
   const uint32_t frameDataEnd = frameDataStart + payloadSize - payloadHeaderOffset;
 
   int i, j;
-  for (i = payloadDataStart, j = frameDataStart; i + 1 < payloadDataEnd; i += 2, j += 2) {
-    data[j] = p[i] & 0x3f;
+  for (i = payloadDataStart, j = 2*frameDataStart/stride; i + 1 < payloadDataEnd; i += stride, j += 2) {
+    data[j] = p[i] & px_mask;
     data[j+1] = p[i+1];
   }
-  for (; j < frameDataEnd; ++i, ++j) {
-    data[j] = p[i] & 0x3f;
+  for (; j < 2*frameDataEnd/stride; ++i, ++j) {
+    data[j] = p[i] & px_mask;
   }
 }
 }
