@@ -9,7 +9,7 @@ namespace Cedes {
 
 UdpServer::UdpServer(boost::asio::io_service& ios)
   : socket(ios, udp::endpoint(udp::v4(), PORT)),
-    recvBuffer(Packet(2048)) {
+    recvBuffer(Packet(RECV_BUFF_SIZE)) {
   startReceive();
 } 
 

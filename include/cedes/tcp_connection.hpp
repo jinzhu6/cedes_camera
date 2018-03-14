@@ -9,6 +9,7 @@ namespace Cedes {
 
 class TcpConnection {
   static const int MARKER_SIZE = 4;
+  static const int ACK_BUF_SIZE = 128;
   static constexpr const char* PORT = "50660";
   static constexpr const char* HOST = "10.10.31.180";
   static constexpr const char* END_MARKER = "\xff\xff\x55\xaa";

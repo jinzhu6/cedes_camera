@@ -41,43 +41,31 @@ Interface::~Interface() {
   ioService.stop();
 }
 
+void Interface::calibrate() {
+  std::vector<uint8_t> command({0x00, COMMAND_CALIBRATE});
+  tcpConnection.sendCommand(command);    
+}
+
 void Interface::stopStream() {
   if (!isStreaming) { return; }
-  std::vector<uint8_t> payload = {0x00, 0x06};
-  tcpConnection.sendCommand(payload);
+  std::vector<uint8_t> command({0x00, COMMAND_STOP_STREAM});
+  tcpConnection.sendCommand(command);    
   isStreaming = false;
 }
 
 void Interface::streamAmplitude() {
   setDataType(0);
-  streamMeasurement(0x02);
+  streamMeasurement(COMMAND_GET_DIST_AND_AMP);
 }
 
 void Interface::streamDistance() {
   setDataType(1);
-  streamMeasurement(0x03);
+  streamMeasurement(COMMAND_GET_DISTANCE);
 }
 
 void Interface::streamGrayscale() {
   setDataType(1);
-  streamMeasurement(0x05);
-}
-
-void Interface::streamMeasurement(uint8_t cmd) {
-  tcpConnection.sendCommand(std::vector<uint8_t>({0x00, cmd, 0x01}));
-  isStreaming = true;
-}
-
-void Interface::getDistanceFrame() {
-  stopStream();
-  std::vector<uint8_t> payload = {0x00, 0x03, 0x00};
-  tcpConnection.sendCommand(payload);
-}
-
-void Interface::getGrayscaleFrame() {
-  stopStream();
-  std::vector<uint8_t> payload = {0x00, 0x05, 0x00};
-  tcpConnection.sendCommand(payload);
+  streamMeasurement(COMMAND_GET_GRAYSCALE);
 }
 
 void Interface::setIntegrationTime(uint16_t low, uint16_t mid, uint16_t high, uint16_t gray) {
@@ -90,18 +78,14 @@ void Interface::setIntegrationTime(uint16_t low, uint16_t mid, uint16_t high, ui
   tcpConnection.sendCommand(payload);
 }
 
-boost::signals2::connection Interface::subscribeCameraInfo(
-  std::function<void (std::shared_ptr<CameraInfo>)> onCameraInfoReady) {
-  cameraInfoReady.connect(onCameraInfoReady);
-}
-
 boost::signals2::connection Interface::subscribeFrame(
   std::function<void (std::shared_ptr<Frame>)> onFrameReady) {
   frameReady.connect(onFrameReady);
 }
 
-void Interface::setDataType(uint8_t d) {
-  dataType = d;
+boost::signals2::connection Interface::subscribeCameraInfo(
+  std::function<void (std::shared_ptr<CameraInfo>)> onCameraInfoReady) {
+  cameraInfoReady.connect(onCameraInfoReady);
 }
 
 std::shared_ptr<CameraInfo> Interface::getCameraInfo(const Packet& p) {
@@ -116,5 +100,14 @@ std::shared_ptr<CameraInfo> Interface::getCameraInfo(const Packet& p) {
   camInfo->roiY1  = (p[offset++] << 8) + p[offset++];
 
   return camInfo;
+}
+
+void Interface::setDataType(uint8_t d) {
+  dataType = d;
+}
+
+void Interface::streamMeasurement(uint8_t cmd) {
+  tcpConnection.sendCommand(std::vector<uint8_t>({0x00, cmd, 0x01}));
+  isStreaming = true;
 }
 }

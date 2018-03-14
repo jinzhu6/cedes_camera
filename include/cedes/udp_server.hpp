@@ -12,6 +12,7 @@ typedef std::vector<uint8_t> Packet;
 
 class UdpServer {
   static const int PORT = 45454;
+  static const int RECV_BUFF_SIZE = 2048;
 
 public:
   UdpServer(boost::asio::io_service &);

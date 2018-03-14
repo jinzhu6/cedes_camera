@@ -22,6 +22,32 @@ TcpConnection::~TcpConnection() {
   }
 }
 
+void TcpConnection::sendCommand(const std::vector<uint8_t>& data) {
+
+  if (!isConnected()) return;
+
+  uint32_t data_len = data.size();
+  size_t buf_size = MARKER_SIZE + sizeof(data_len) + data_len + MARKER_SIZE;
+  
+  std::ostringstream os;
+  os << START_MARKER;
+  os << static_cast<uint8_t>((data_len >> 24) & 0xff);
+  os << static_cast<uint8_t>((data_len >> 16) & 0xff);
+  os << static_cast<uint8_t>((data_len >>  8) & 0xff);
+  os << static_cast<uint8_t>((data_len >>  0) & 0xff);
+  for (int i = 0; i < data_len; ++i) {
+    os << static_cast<uint8_t>(data[i]);
+  }
+  os << END_MARKER;
+
+  boost::system::error_code error;
+  socket.write_some(boost::asio::buffer(os.str(), os.tellp()), error);
+  if (error) {
+    throw boost::system::system_error(error);
+  }
+  waitAck();
+}
+
 void TcpConnection::connect() {
   if (isConnected()) return;
 
@@ -55,42 +81,8 @@ void TcpConnection::disconnect() {
   updateState(STATE_DISCONNECTED);
 }
 
-bool TcpConnection::isConnected() const {
-  return state == STATE_CONNECTED;
-}
-
-bool TcpConnection::isDisconnected() const {
-  return state == STATE_DISCONNECTED;
-}
-
-void TcpConnection::sendCommand(const std::vector<uint8_t>& data) {
-
-  if (!isConnected()) return;
-
-  uint32_t data_len = data.size();
-  size_t buf_size = MARKER_SIZE + sizeof(data_len) + data_len + MARKER_SIZE;
-  
-  std::ostringstream os;
-  os << START_MARKER;
-  os << static_cast<uint8_t>((data_len >> 24) & 0xff);
-  os << static_cast<uint8_t>((data_len >> 16) & 0xff);
-  os << static_cast<uint8_t>((data_len >>  8) & 0xff);
-  os << static_cast<uint8_t>((data_len >>  0) & 0xff);
-  for (int i = 0; i < data_len; ++i) {
-    os << static_cast<uint8_t>(data[i]);
-  }
-  os << END_MARKER;
-
-  boost::system::error_code error;
-  socket.write_some(boost::asio::buffer(os.str(), os.tellp()), error);
-  if (error) {
-    throw boost::system::system_error(error);
-  }
-  waitAck();
-}
-
 void TcpConnection::waitAck() {
-  Packet buf(128);
+  Packet buf(ACK_BUF_SIZE);
   boost::system::error_code error;
 
   this->updateState(STATE_WAIT_ACK);
@@ -108,5 +100,13 @@ void TcpConnection::updateState(State state_) const {
 
 void TcpConnection::revertState() const {
   state = previousState;
+}
+
+bool TcpConnection::isConnected() const {
+  return state == STATE_CONNECTED;
+}
+
+bool TcpConnection::isDisconnected() const {
+  return state == STATE_DISCONNECTED;
 }
 }

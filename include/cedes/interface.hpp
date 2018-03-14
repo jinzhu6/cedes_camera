@@ -18,12 +18,11 @@ public:
   Interface();
   ~Interface();
 
+  void calibrate();
   void stopStream();
-  void streamDistance();
   void streamAmplitude();
+  void streamDistance();
   void streamGrayscale();
-  void getDistanceFrame();
-  void getGrayscaleFrame();
   void setIntegrationTime(uint16_t, uint16_t, uint16_t, uint16_t);
   boost::signals2::connection subscribeFrame(std::function<void (std::shared_ptr<Frame>)>);
   boost::signals2::connection subscribeCameraInfo(std::function<void (std::shared_ptr<CameraInfo>)>);
@@ -34,6 +33,13 @@ private:
   uint8_t dataType;
   uint64_t currentFrame_id;
 
+  const static uint8_t COMMAND_SET_INT_TIMES = 1;
+  const static uint8_t COMMAND_GET_DIST_AND_AMP = 2;
+  const static uint8_t COMMAND_GET_DISTANCE = 3;
+  const static uint8_t COMMAND_GET_GRAYSCALE = 5;
+  const static uint8_t COMMAND_STOP_STREAM = 6;
+  const static uint8_t COMMAND_CALIBRATE = 30;
+
   std::shared_ptr<Frame> currentFrame;
   boost::asio::io_service ioService;
   boost::scoped_ptr<boost::thread> serverThread;
@@ -42,8 +48,8 @@ private:
   TcpConnection tcpConnection;
   UdpServer udpServer;
 
-  void streamMeasurement(uint8_t);
   void setDataType(uint8_t);
+  void streamMeasurement(uint8_t);
 };
 }
 #endif

@@ -17,17 +17,16 @@ struct Frame {
   };
 
   static const int UDP_HEADER_OFFSET = 20;
-  uint16_t payloadHeaderOffset;
   
-  uint64_t cnt;
-
+  uint8_t stride;
+  uint8_t px_mask;
   uint16_t dataType;
-  uint64_t frame_id;
   uint16_t width;
   uint16_t height;
+  uint16_t payloadHeaderOffset;
   uint32_t px_size;
-  uint8_t px_mask;
-  uint8_t stride;
+  uint64_t cnt;
+  uint64_t frame_id;
 
   std::vector<uint8_t> data;
   std::vector<uint8_t>::iterator frameIter;

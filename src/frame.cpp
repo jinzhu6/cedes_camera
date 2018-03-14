@@ -1,9 +1,8 @@
 #include "frame.hpp"
 #include <stdint.h>
 
-#include <iostream>
-
 namespace Cedes {
+
 Frame::Frame(uint16_t dataType, uint64_t frame_id, uint16_t width, uint16_t height)
   : frame_id(frame_id),
     width(width),
