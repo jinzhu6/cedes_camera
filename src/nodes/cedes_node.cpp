@@ -17,12 +17,11 @@ public:
       cameraSeq(0),
       nh("~") {
 
-    nh.getParam("measurement", streamType);
-    nh.getParam("int_time_low", int_time_low);
-    nh.getParam("int_time_mid", int_time_mid);
-    nh.getParam("int_time_high", int_time_high);
-    nh.getParam("int_time_gray", int_time_gray);
-    nh.getParam("calibrate", doCalibrate);
+    nh.getParam("stream", streamType);
+    nh.getParam("int0", int0);
+    nh.getParam("int1", int1);
+    nh.getParam("int2", int2);
+    nh.getParam("intGr", intGr);
 
     imagePublisher = nh.advertise<sensor_msgs::Image>("image_raw", 1000);
     connectionCameraInfo = iface.subscribeCameraInfo(
@@ -58,7 +57,6 @@ public:
   }
 
   void run() {
-    calibrate();
     setIntegrationTimes();
     sendCommand();
     ROS_INFO("[Cedes] Streaming %s", streamType.c_str());  
@@ -78,8 +76,7 @@ private:
     STREAM_GRAYSCALE,
   };
 
-  int int_time_low, int_time_mid, int_time_high, int_time_gray;
-  bool doCalibrate;
+  int int0, int1, int2, intGr;
   uint32_t frameSeq, cameraSeq;
   std::string streamType;
   std::map<std::string, Command> commandMap =
@@ -99,15 +96,8 @@ private:
   boost::signals2::connection connectionFrames;
   boost::signals2::connection connectionCameraInfo;
 
-  void calibrate() {
-    if (doCalibrate) {
-      iface.calibrate();
-      ROS_INFO("[Cedes] Camera calibrated");
-    }
-  }
-
   void setIntegrationTimes() {
-    iface.setIntegrationTime(int_time_low, int_time_mid, int_time_high, int_time_gray);
+    iface.setIntegrationTime(int0, int1, int2, intGr);
   }
 
   void sendCommand() {

@@ -4,12 +4,11 @@
   <arg name="ns" default="cedes"/>
   <arg name="nn" default="camera"/>
   <arg name="respawn" default="false"/>
-  <arg name="measurement" default="distance"/>
-  <arg name="int_time_low"  default="1000"/>
-  <arg name="int_time_mid"  default="1000"/>
-  <arg name="int_time_high" default="1000"/>
-  <arg name="int_time_gray" default="1000"/>
-  <arg name="calibrate" default="false" />
+  <arg name="stream" default="distance"/>
+  <arg name="int0"  default="1000"/>
+  <arg name="int1"  default="1000"/>
+  <arg name="int2" default="0"/>
+  <arg name="intGr" default="1000"/>
 
   <group ns="$(arg ns)">
     <node pkg="cedes" 
@@ -18,12 +17,11 @@
           output="screen"
           respawn="$(arg respawn)">
 
-      <param name="measurement" value="$(arg measurement)"/>
-      <param name="int_time_low" value="$(arg int_time_low)"/>
-      <param name="int_time_mid" value="$(arg int_time_mid)"/>
-      <param name="int_time_high" value="$(arg int_time_high)"/>
-      <param name="int_time_gray" value="$(arg int_time_gray)"/>
-      <param name="calibrate" value="$(arg calibrate)"/>
+      <param name="stream" value="$(arg stream)"/>
+      <param name="int0" value="$(arg int0)"/>
+      <param name="int1" value="$(arg int1)"/>
+      <param name="int2" value="$(arg int2)"/>
+      <param name="intGr" value="$(arg intGr)"/>
 
       <remap from="image_raw" to="$(arg nn)/image_raw"/> 
       <remap from="camera_info" to="$(arg nn)/camera_info"/> 

@@ -18,7 +18,6 @@ public:
   Interface();
   ~Interface();
 
-  void calibrate();
   void stopStream();
   void streamAmplitude();
   void streamDistance();

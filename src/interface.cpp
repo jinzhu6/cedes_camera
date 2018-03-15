@@ -41,11 +41,6 @@ Interface::~Interface() {
   ioService.stop();
 }
 
-void Interface::calibrate() {
-  std::vector<uint8_t> command({0x00, COMMAND_CALIBRATE});
-  tcpConnection.sendCommand(command);    
-}
-
 void Interface::stopStream() {
   if (!isStreaming) { return; }
   std::vector<uint8_t> command({0x00, COMMAND_STOP_STREAM});
