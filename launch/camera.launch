@@ -5,9 +5,9 @@
   <arg name="nn" default="camera"/>
   <arg name="respawn" default="false"/>
   <arg name="measurement" default="distance"/>
-  <arg name="int_time_low"  default="100"/>
-  <arg name="int_time_mid"  default="100"/>
-  <arg name="int_time_high" default="100"/>
+  <arg name="int_time_low"  default="1000"/>
+  <arg name="int_time_mid"  default="1000"/>
+  <arg name="int_time_high" default="1000"/>
   <arg name="int_time_gray" default="1000"/>
   <arg name="calibrate" default="false" />
 

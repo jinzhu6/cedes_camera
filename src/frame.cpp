@@ -1,6 +1,8 @@
 #include "frame.hpp"
 #include <stdint.h>
 
+#include <iostream>
+
 namespace Cedes {
 
 Frame::Frame(uint16_t dataType, uint64_t frame_id, uint16_t width, uint16_t height)
@@ -14,7 +16,7 @@ Frame::Frame(uint16_t dataType, uint64_t frame_id, uint16_t width, uint16_t heig
         px_mask = 0x0F;
         stride = 4;
       } else {
-        px_mask = 0x3F;
+        px_mask = 0xFF;
         stride = 2;
       }
 }
@@ -33,6 +35,7 @@ void Frame::addDataAtStart(const Packet& p) {
 
   int i, j;
   for (i = payloadDataStart, j = 2*frameDataStart/stride; i + 1 < payloadDataEnd; i += stride, j += 2) {
+    if (p[i+1] > 42) { continue; }
     data[j] = p[i];
     data[j+1] = p[i+1] & px_mask;
   }
@@ -49,15 +52,27 @@ void Frame::addDataAtOffset(const Packet& p) {
 
   const uint32_t frameDataStart = (p[8] << 24) + (p[9] << 16) + (p[10] << 8) 
     + p[11] - payloadHeaderOffset;
-  const uint32_t frameDataEnd = frameDataStart + payloadSize - payloadHeaderOffset;
+  const uint32_t frameDataEnd = frameDataStart + payloadSize;
 
   int i, j;
-  for (i = payloadDataStart, j = 2*frameDataStart/stride; i + 1 < payloadDataEnd; i += stride, j += 2) {
-    data[j] = p[i] & px_mask;
-    data[j+1] = p[i+1];
-  }
-  for (; j < 2*frameDataEnd/stride; ++i, ++j) {
-    data[j] = p[i] & px_mask;
+  if (frameDataStart % 2 == 1) {
+    for (i = payloadDataStart, j = 2*frameDataStart/stride; i + 1 < payloadDataEnd; i += stride, j += 2) {
+      if (p[i] > 40) { continue; }
+      data[j] = p[i] & px_mask;
+      data[j+1] = p[i+1];
+    }
+    for (; j < 2*frameDataEnd/stride; ++i, ++j) {
+      data[j] = p[i] & px_mask;
+    }
+  } else {
+    for (i = payloadDataStart, j = 2*frameDataStart/stride; i + 1 < payloadDataEnd; i += stride, j += 2) {
+      if (p[i+1] > 40) { continue; }
+      data[j] = p[i];
+      data[j+1] = p[i+1] & px_mask;
+    }
+    for (; j < 2*frameDataEnd/stride; ++i, ++j) {
+      data[j] = p[i];
+    }
   }
 }
 }

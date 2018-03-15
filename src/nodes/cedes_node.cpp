@@ -73,9 +73,9 @@ public:
 
 private:
   enum Command {
+    STREAM_AMPLITUDE,
     STREAM_DISTANCE,
     STREAM_GRAYSCALE,
-    STREAM_AMPLITUDE,
   };
 
   int int_time_low, int_time_mid, int_time_high, int_time_gray;
